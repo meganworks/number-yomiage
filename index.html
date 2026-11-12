@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>すうじよみあげ100</title>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    font-family: "M PLUS Rounded 1c", system-ui, sans-serif;
+    background: #fff8ec; color: #3a2e25;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 10px; user-select: none; -webkit-user-select: none;
+  }
+  .wrap { width: 100%; max-width: max(300px, min(560px, calc(100dvh - 270px))); }
+  #big {
+    height: 104px; display: flex; align-items: center; justify-content: center; gap: 14px;
+    background: #fff; border-radius: 22px; box-shadow: 0 3px 0 #ead9bf; margin-bottom: 8px;
+  }
+  #bigNum { font-size: 70px; font-weight: 800; line-height: 1; }
+  #bigYomi { font-size: 21px; color: #8a7360; }
+  #bigNum.pop { animation: pop .35s ease; }
+  @keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  .bar { display: flex; gap: 6px; margin-bottom: 8px; }
+  .bar button {
+    flex: 1; padding: 11px 4px; border: none; border-radius: 14px;
+    font-family: inherit; font-weight: 800; font-size: 15px;
+    background: #fff; color: #3a2e25; box-shadow: 0 3px 0 #ead9bf;
+  }
+  .bar button.active { background: #ffcf5a; box-shadow: 0 3px 0 #d9a52c; }
+  .seg { flex: 1; display: flex; background: #fff; border-radius: 14px; padding: 3px; box-shadow: 0 3px 0 #ead9bf; }
+  .seg button { box-shadow: none; padding: 9px 2px; font-size: 14px; border-radius: 11px; background: transparent; }
+  .seg button.active { box-shadow: none; }
+  @media (prefers-reduced-motion: reduce) { #bigNum.pop { animation: none; } .cell, .cell.on { transition: none; transform: none; } }
+  .bar button:disabled { opacity: .35; }
+  #board { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+  .cell {
+    aspect-ratio: 1; border: none; border-radius: 10px; padding: 0; min-width: 0;
+    font-family: inherit; font-weight: 800; font-size: clamp(13px, 3.8vw, 24px); letter-spacing: -0.02em;
+    color: #3a2e25; box-shadow: 0 2px 0 rgba(0,0,0,.12); transition: transform .1s;
+  }
+  .cell:active { transform: scale(.92); }
+  .cell.on { outline: 4px solid #3a2e25; transform: scale(1.08); }
+  #credit { margin-top: 10px; font-size: 11px; color: #b09a86; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="big" aria-live="polite"><span id="bigNum">?</span><span id="bigYomi">さわってね</span></div>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="ことば">
+      <button id="langJa" class="active" aria-pressed="true">にほんご</button>
+      <button id="langEn" aria-pressed="false">English</button>
+    </div>
+    <div class="seg" role="group" aria-label="こえ">
+      <button id="voiceF" class="active" aria-pressed="true">おんな</button>
+      <button id="voiceM" aria-pressed="false">おとこ</button>
+    </div>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="bar" style="margin-top:8px">
+    <button id="contBtn" aria-pressed="false">つづけて：OFF</button>
+    <button id="countBtn">▶ 1から</button>
+    <button id="tenBtn">▶ 10ずつ</button>
+  </div>
+
+  <div id="credit">VOICEVOX:春日部つむぎ / VOICEVOX:玄野武宏</div>
+</div>
+
+<script>
+const ONES = ["", "いち", "に", "さん", "よん", "ご", "ろく", "なな", "はち", "きゅう"];
+const TENS = ["", "じゅう", "にじゅう", "さんじゅう", "よんじゅう", "ごじゅう", "ろくじゅう", "ななじゅう", "はちじゅう", "きゅうじゅう"];
+const jaYomi = n => n === 100 ? "ひゃく" : TENS[Math.floor(n / 10)] + ONES[n % 10];
+
+const EN_ONES = ["", "one","two","three","four","five","six","seven","eight","nine","ten",
+  "eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+const EN_TENS = ["", "", "twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+const enYomi = n => n === 100 ? "one hundred" : n < 20 ? EN_ONES[n]
+  : EN_TENS[Math.floor(n / 10)] + (n % 10 ? "-" + EN_ONES[n % 10] : "");
+
+const COLORS = ["#ffd6d6","#ffe3c2","#fff1b8","#dff5c4","#c9efe0","#c8e6f7","#d6dcff","#e8d6ff","#ffd6ef","#f0e2d0"];
+
+let lang = "ja", voice = "f", cont = false;
+const $ = id => document.getElementById(id);
+const board = $("board"), bigNum = $("bigNum"), bigYomi = $("bigYomi");
+const cells = [];
+
+for (let n = 1; n <= 100; n++) {
+  const b = document.createElement("button");
+  b.className = "cell";
+  b.textContent = n;
+  b.style.background = COLORS[Math.floor((n - 1) / 10)];
+  b.addEventListener("click", () => cont ? run(n, 1, null) : (stop(), show(n), say(n)));
+  board.appendChild(b);
+  cells.push(b);
+}
+
+function show(n) {
+  cells.forEach(c => c.classList.remove("on"));
+  cells[n - 1].classList.add("on");
+  bigNum.textContent = n;
+  bigYomi.textContent = lang === "ja" ? jaYomi(n) : enYomi(n);
+  bigNum.classList.remove("pop"); void bigNum.offsetWidth; bigNum.classList.add("pop");
+}
+
+// 日本語はVOICEVOXの録音、英語は端末の読み上げ音声
+const audio = new Audio();
+let enVoice = null;
+function pickEn() {
+  if (!("speechSynthesis" in window)) return;
+  const vs = speechSynthesis.getVoices();
+  enVoice = vs.find(v => v.lang === "en-US") || vs.find(v => v.lang && v.lang.startsWith("en")) || null;
+}
+if ("speechSynthesis" in window) { pickEn(); speechSynthesis.onvoiceschanged = pickEn; }
+
+function say(n, onend) {
+  audio.onended = null;
+  audio.pause();
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  if (lang === "ja") {
+    audio.src = `ja_${voice}/${n}.mp3`;
+    audio.onended = onend || null;
+    audio.play().catch(() => onend && setTimeout(onend, 700));
+  } else {
+    if (!("speechSynthesis" in window)) { if (onend) setTimeout(onend, 700); return; }
+    const u = new SpeechSynthesisUtterance(enYomi(n));
+    u.lang = "en-US";
+    if (enVoice) u.voice = enVoice;
+    u.rate = 0.85;
+    if (onend) u.onend = onend;
+    speechSynthesis.speak(u);
+  }
+}
+
+// かけながし（start から step ずつ 100 まで）
+let running = null;
+const countBtn = $("countBtn"), tenBtn = $("tenBtn"), contBtn = $("contBtn");
+
+function stop() {
+  running = null;
+  countBtn.classList.remove("active"); tenBtn.classList.remove("active");
+  countBtn.textContent = "▶ 1から"; tenBtn.textContent = "▶ 10ずつ";
+  audio.onended = null; audio.pause();
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+}
+
+function run(start, step, btn) {
+  stop();
+  const token = {};
+  running = token;
+  if (btn) { btn.classList.add("active"); btn.textContent = "■ とめる"; }
+  let n = start;
+  const next = () => {
+    if (running !== token) return;
+    if (n > 100) { stop(); return; }
+    show(n);
+    const cur = n;
+    n += step;
+    say(cur, () => setTimeout(next, 300));
+  };
+  next();
+}
+
+countBtn.addEventListener("click", () => countBtn.classList.contains("active") ? stop() : run(1, 1, countBtn));
+tenBtn.addEventListener("click", () => tenBtn.classList.contains("active") ? stop() : run(10, 10, tenBtn));
+contBtn.addEventListener("click", () => {
+  cont = !cont;
+  contBtn.classList.toggle("active", cont);
+  contBtn.textContent = "つづけて：" + (cont ? "ON" : "OFF");
+  if (!cont) stop();
+});
+
+function setLang(l) {
+  lang = l; stop();
+  $("langJa").classList.toggle("active", l === "ja");
+  $("langEn").classList.toggle("active", l === "en");
+  $("voiceF").disabled = $("voiceM").disabled = l === "en";
+  bigNum.textContent = "?";
+  bigYomi.textContent = l === "ja" ? "さわってね" : "tap a number";
+  cells.forEach(c => c.classList.remove("on"));
+}
+function setVoice(v) {
+  voice = v; stop();
+  $("voiceF").classList.toggle("active", v === "f");
+  $("voiceM").classList.toggle("active", v === "m");
+}
+$("langJa").addEventListener("click", () => setLang("ja"));
+$("langEn").addEventListener("click", () => setLang("en"));
+$("voiceF").addEventListener("click", () => setVoice("f"));
+$("voiceM").addEventListener("click", () => setVoice("m"));
+// 見た目の選択状態と読み上げソフト向けの状態を合わせる
+new MutationObserver(ms => ms.forEach(m => {
+  const el = m.target;
+  if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", el.classList.contains("active"));
+})).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
+</script>
+</body>
+</html>
