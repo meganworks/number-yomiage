@@ -7,69 +7,128 @@
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; }
+  html, body { margin: 0; height: 100%; }
   body {
     font-family: "M PLUS Rounded 1c", system-ui, sans-serif;
     background: #fff8ec; color: #3a2e25;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 10px; user-select: none; -webkit-user-select: none;
+    user-select: none; -webkit-user-select: none; overflow: hidden;
   }
-  .wrap { width: 100%; max-width: max(300px, min(560px, calc(100dvh - 270px))); }
+  .app {
+    height: 100dvh; max-width: 640px; margin: 0 auto; padding: 10px;
+    display: grid; grid-template-rows: auto auto 1fr auto; gap: 8px;
+  }
+  button { font-family: inherit; font-weight: 800; color: #3a2e25; border: none; }
+
+  /* いま読んだ数字 */
   #big {
-    height: 104px; display: flex; align-items: center; justify-content: center; gap: 14px;
-    background: #fff; border-radius: 22px; box-shadow: 0 3px 0 #ead9bf; margin-bottom: 8px;
+    position: relative; height: 84px; display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: #fff; border-radius: 22px; box-shadow: 0 3px 0 #ead9bf;
   }
-  #bigNum { font-size: 70px; font-weight: 800; line-height: 1; }
-  #bigYomi { font-size: 21px; color: #8a7360; }
+  #bigNum { font-size: 58px; font-weight: 800; line-height: 1; }
+  #bigYomi { font-size: 20px; color: #8a7360; }
   #bigNum.pop { animation: pop .35s ease; }
   @keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
-  .bar { display: flex; gap: 6px; margin-bottom: 8px; }
-  .bar button {
-    flex: 1; padding: 11px 4px; border: none; border-radius: 14px;
-    font-family: inherit; font-weight: 800; font-size: 15px;
-    background: #fff; color: #3a2e25; box-shadow: 0 3px 0 #ead9bf;
+  #gear {
+    position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 12px;
+    background: #fff4e0; font-size: 20px; line-height: 40px; padding: 0;
   }
-  .bar button.active { background: #ffcf5a; box-shadow: 0 3px 0 #d9a52c; }
-  .seg { flex: 1; display: flex; background: #fff; border-radius: 14px; padding: 3px; box-shadow: 0 3px 0 #ead9bf; }
-  .seg button { box-shadow: none; padding: 9px 2px; font-size: 14px; border-radius: 11px; background: transparent; }
-  .seg button.active { box-shadow: none; }
-  @media (prefers-reduced-motion: reduce) { #bigNum.pop { animation: none; } .cell, .cell.on { transition: none; transform: none; } }
-  .bar button:disabled { opacity: .35; }
-  #board { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+
+  /* 10の段えらび */
+  #tens { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+  .ten {
+    height: 46px; border-radius: 12px; padding: 0; font-size: clamp(12px, 3.6vw, 18px);
+    box-shadow: 0 2px 0 rgba(0,0,0,.12);
+  }
+  .ten.on { opacity: 1; outline: 3px solid #3a2e25; outline-offset: -3px; }
+
+  /* クソデカパネル（10こ） */
+  #panels {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: 10px; min-height: 0; touch-action: pan-y;
+  }
+  @media (min-aspect-ratio: 4/5) {
+    #panels { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  }
+  .panel {
+    border-radius: 26px; font-size: clamp(36px, min(14vw, 9dvh), 110px); padding: 0; min-height: 0;
+    box-shadow: 0 5px 0 rgba(0,0,0,.14); transition: transform .1s;
+  }
+  .panel:active { transform: scale(.95); }
+  .panel.on { outline: 6px solid #3a2e25; outline-offset: -6px; }
+
+  /* ぜんぶ（10×10） */
+  #board { display: none; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; align-content: start; }
+  .all #board { display: grid; }
+  .all #tens, .all #panels { display: none; }
+  .all .app { grid-template-rows: auto 1fr auto; }
   .cell {
-    aspect-ratio: 1; border: none; border-radius: 10px; padding: 0; min-width: 0;
-    font-family: inherit; font-weight: 800; font-size: clamp(13px, 3.8vw, 24px); letter-spacing: -0.02em;
-    color: #3a2e25; box-shadow: 0 2px 0 rgba(0,0,0,.12); transition: transform .1s;
+    aspect-ratio: 1; border-radius: 10px; padding: 0; min-width: 0;
+    font-size: clamp(13px, 3.8vw, 24px); letter-spacing: -0.02em; box-shadow: 0 2px 0 rgba(0,0,0,.12);
   }
-  .cell:active { transform: scale(.92); }
-  .cell.on { outline: 4px solid #3a2e25; transform: scale(1.08); }
-  #credit { margin-top: 10px; font-size: 11px; color: #b09a86; text-align: center; }
+  .cell.on { outline: 4px solid #3a2e25; outline-offset: -4px; }
+
+  /* 下のボタン */
+  .bar { display: flex; gap: 8px; }
+  .bar button {
+    flex: 1; padding: 14px 4px; border-radius: 16px; font-size: clamp(13px, 4vw, 16px); white-space: nowrap;
+    background: #fff; box-shadow: 0 3px 0 #ead9bf;
+  }
+  .bar button.active, .seg button.active { background: #ffcf5a; box-shadow: 0 3px 0 #d9a52c; }
+
+  /* せってい */
+  #sheet {
+    position: fixed; inset: 0; background: rgba(58,46,37,.35);
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  #sheet.open { display: flex; }
+  .sheetBody {
+    width: 100%; max-width: 640px; background: #fff8ec; border-radius: 26px 26px 0 0;
+    padding: 18px 16px max(18px, env(safe-area-inset-bottom));
+  }
+  .sheetBody h2 { margin: 0 0 12px; font-size: 18px; }
+  .row { margin-bottom: 14px; }
+  .row label { display: block; font-size: 13px; color: #8a7360; margin-bottom: 6px; }
+  .seg { display: flex; gap: 6px; }
+  .seg button { flex: 1; padding: 13px 4px; border-radius: 14px; font-size: 16px; background: #fff; box-shadow: 0 3px 0 #ead9bf; }
+  .seg button:disabled { opacity: .35; }
+  #close { width: 100%; padding: 14px; border-radius: 16px; font-size: 16px; background: #3a2e25; color: #fff; }
+  #credit { margin-top: 12px; font-size: 11px; color: #b09a86; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #bigNum.pop { animation: none; } .panel, .panel:active { transition: none; transform: none; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div id="big" aria-live="polite"><span id="bigNum">?</span><span id="bigYomi">さわってね</span></div>
-
-  <div class="bar">
-    <div class="seg" role="group" aria-label="ことば">
-      <button id="langJa" class="active" aria-pressed="true">にほんご</button>
-      <button id="langEn" aria-pressed="false">English</button>
-    </div>
-    <div class="seg" role="group" aria-label="こえ">
-      <button id="voiceF" class="active" aria-pressed="true">おんな</button>
-      <button id="voiceM" aria-pressed="false">おとこ</button>
-    </div>
+<div class="app">
+  <div id="big" aria-live="polite">
+    <span id="bigNum">?</span><span id="bigYomi">さわってね</span>
+    <button id="gear" aria-label="せってい">⚙︎</button>
   </div>
 
+  <div id="tens" role="group" aria-label="10のだん"></div>
+  <div id="panels"></div>
   <div id="board"></div>
 
-  <div class="bar" style="margin-top:8px">
+  <div class="bar">
     <button id="contBtn" aria-pressed="false">つづけて：OFF</button>
     <button id="countBtn">▶ 1から</button>
     <button id="tenBtn">▶ 10ずつ</button>
   </div>
+</div>
 
-  <div id="credit">VOICEVOX:春日部つむぎ / VOICEVOX:玄野武宏</div>
+<div id="sheet" role="dialog" aria-modal="true" aria-label="せってい">
+  <div class="sheetBody">
+    <h2>せってい</h2>
+    <div class="row"><label>ことば</label>
+      <div class="seg"><button id="langJa" class="active" aria-pressed="true">にほんご</button><button id="langEn" aria-pressed="false">English</button></div></div>
+    <div class="row"><label>こえ（にほんご）</label>
+      <div class="seg"><button id="voiceF" class="active" aria-pressed="true">おんな</button><button id="voiceM" aria-pressed="false">おとこ</button></div></div>
+    <div class="row"><label>ひょうじ</label>
+      <div class="seg"><button id="viewBig" class="active" aria-pressed="true">おおきく（10こ）</button><button id="viewAll" aria-pressed="false">ぜんぶ（100こ）</button></div></div>
+    <button id="close">とじる</button>
+    <div id="credit">VOICEVOX:春日部つむぎ / VOICEVOX:玄野武宏</div>
+  </div>
 </div>
 
 <script>
@@ -83,26 +142,68 @@ const EN_TENS = ["", "", "twenty","thirty","forty","fifty","sixty","seventy","ei
 const enYomi = n => n === 100 ? "one hundred" : n < 20 ? EN_ONES[n]
   : EN_TENS[Math.floor(n / 10)] + (n % 10 ? "-" + EN_ONES[n % 10] : "");
 
+// 10の段ごとの色（くもん数字盤と同じく段で区切りが見えるように）
 const COLORS = ["#ffd6d6","#ffe3c2","#fff1b8","#dff5c4","#c9efe0","#c8e6f7","#d6dcff","#e8d6ff","#ffd6ef","#f0e2d0"];
+const rowOf = n => Math.floor((n - 1) / 10);
 
-let lang = "ja", voice = "f", cont = false;
+let lang = "ja", voice = "f", cont = false, page = 0, current = 0;
 const $ = id => document.getElementById(id);
-const board = $("board"), bigNum = $("bigNum"), bigYomi = $("bigYomi");
-const cells = [];
+const bigNum = $("bigNum"), bigYomi = $("bigYomi");
 
-for (let n = 1; n <= 100; n++) {
+function tap(n) { cont ? run(n, 1, null) : (stop(), show(n), say(n)); }
+
+// 10の段えらび
+const tenBtns = COLORS.map((c, i) => {
   const b = document.createElement("button");
-  b.className = "cell";
-  b.textContent = n;
-  b.style.background = COLORS[Math.floor((n - 1) / 10)];
-  b.addEventListener("click", () => cont ? run(n, 1, null) : (stop(), show(n), say(n)));
-  board.appendChild(b);
-  cells.push(b);
+  b.className = "ten"; b.textContent = i * 10 + 1; b.style.background = c;
+  b.setAttribute("aria-label", `${i * 10 + 1}から${i * 10 + 10}`);
+  b.addEventListener("click", () => setPage(i));
+  $("tens").appendChild(b);
+  return b;
+});
+
+// 大きいパネル10こ（中身はページで入れ替え）
+const panels = Array.from({ length: 10 }, (_, i) => {
+  const b = document.createElement("button");
+  b.className = "panel";
+  b.addEventListener("click", () => tap(page * 10 + i + 1));
+  $("panels").appendChild(b);
+  return b;
+});
+
+// ぜんぶ表示の100マス
+const cells = Array.from({ length: 100 }, (_, i) => {
+  const b = document.createElement("button");
+  b.className = "cell"; b.textContent = i + 1; b.style.background = COLORS[rowOf(i + 1)];
+  b.addEventListener("click", () => tap(i + 1));
+  $("board").appendChild(b);
+  return b;
+});
+
+function setPage(p) {
+  page = p;
+  tenBtns.forEach((b, i) => b.classList.toggle("on", i === p));
+  panels.forEach((b, i) => {
+    const n = p * 10 + i + 1;
+    b.textContent = n; b.style.background = COLORS[p];
+    b.classList.toggle("on", n === current);
+  });
 }
 
+// 左右スワイプで前後の段へ
+let sx = null;
+$("panels").addEventListener("touchstart", e => { sx = e.touches[0].clientX; }, { passive: true });
+$("panels").addEventListener("touchend", e => {
+  if (sx === null) return;
+  const dx = e.changedTouches[0].clientX - sx; sx = null;
+  if (Math.abs(dx) > 60) setPage(Math.min(9, Math.max(0, page + (dx < 0 ? 1 : -1))));
+});
+
 function show(n) {
-  cells.forEach(c => c.classList.remove("on"));
-  cells[n - 1].classList.add("on");
+  current = n;
+  if (rowOf(n) !== page) setPage(rowOf(n));
+  panels.forEach(b => b.classList.toggle("on", +b.textContent === n));
+  cells.forEach((c, i) => c.classList.toggle("on", i + 1 === n));
   bigNum.textContent = n;
   bigYomi.textContent = lang === "ja" ? jaYomi(n) : enYomi(n);
   bigNum.classList.remove("pop"); void bigNum.offsetWidth; bigNum.classList.add("pop");
@@ -175,29 +276,32 @@ contBtn.addEventListener("click", () => {
   if (!cont) stop();
 });
 
-function setLang(l) {
-  lang = l; stop();
-  $("langJa").classList.toggle("active", l === "ja");
-  $("langEn").classList.toggle("active", l === "en");
-  $("voiceF").disabled = $("voiceM").disabled = l === "en";
-  bigNum.textContent = "?";
-  bigYomi.textContent = l === "ja" ? "さわってね" : "tap a number";
-  cells.forEach(c => c.classList.remove("on"));
-}
-function setVoice(v) {
-  voice = v; stop();
-  $("voiceF").classList.toggle("active", v === "f");
-  $("voiceM").classList.toggle("active", v === "m");
-}
+// せってい
+function pick(onId, offId) { $(onId).classList.add("active"); $(offId).classList.remove("active"); }
+$("gear").addEventListener("click", () => $("sheet").classList.add("open"));
+$("close").addEventListener("click", () => $("sheet").classList.remove("open"));
+$("sheet").addEventListener("click", e => { if (e.target.id === "sheet") $("sheet").classList.remove("open"); });
 $("langJa").addEventListener("click", () => setLang("ja"));
 $("langEn").addEventListener("click", () => setLang("en"));
-$("voiceF").addEventListener("click", () => setVoice("f"));
-$("voiceM").addEventListener("click", () => setVoice("m"));
+$("voiceF").addEventListener("click", () => { voice = "f"; stop(); pick("voiceF", "voiceM"); });
+$("voiceM").addEventListener("click", () => { voice = "m"; stop(); pick("voiceM", "voiceF"); });
+$("viewBig").addEventListener("click", () => { document.body.classList.remove("all"); pick("viewBig", "viewAll"); });
+$("viewAll").addEventListener("click", () => { document.body.classList.add("all"); pick("viewAll", "viewBig"); });
+
+function setLang(l) {
+  lang = l; stop();
+  l === "ja" ? pick("langJa", "langEn") : pick("langEn", "langJa");
+  $("voiceF").disabled = $("voiceM").disabled = l === "en";
+  bigYomi.textContent = current ? (l === "ja" ? jaYomi(current) : enYomi(current)) : (l === "ja" ? "さわってね" : "tap a number");
+}
+
 // 見た目の選択状態と読み上げソフト向けの状態を合わせる
 new MutationObserver(ms => ms.forEach(m => {
   const el = m.target;
   if (el.hasAttribute("aria-pressed")) el.setAttribute("aria-pressed", el.classList.contains("active"));
 })).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["class"] });
+
+setPage(0);
 </script>
 </body>
 </html>
