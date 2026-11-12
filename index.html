@@ -113,7 +113,7 @@
   <div class="bar">
     <button id="contBtn" aria-pressed="false">つづけて：OFF</button>
     <button id="countBtn">▶ 1から</button>
-    <button id="tenBtn">▶ 10ずつ</button>
+    <button id="tenBtn">▶ 10・20・30</button>
   </div>
 </div>
 
@@ -245,7 +245,7 @@ const countBtn = $("countBtn"), tenBtn = $("tenBtn"), contBtn = $("contBtn");
 function stop() {
   running = null;
   countBtn.classList.remove("active"); tenBtn.classList.remove("active");
-  countBtn.textContent = "▶ 1から"; tenBtn.textContent = "▶ 10ずつ";
+  countBtn.textContent = "▶ 1から"; tenBtn.textContent = "▶ 10・20・30";
   audio.onended = null; audio.pause();
   if ("speechSynthesis" in window) speechSynthesis.cancel();
 }
